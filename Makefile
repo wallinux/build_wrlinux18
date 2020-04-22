@@ -36,7 +36,7 @@ DISTRO			?= wrlinux
 LAYERS			+= $(TOP)/layers/meta-tmp
 
 ifeq ($(MACHINE),qemuarm64)
-MULTILIB		?= lib64
+MULTILIB		?= lib32
 endif
 
 PACKAGES		+= perf openssh rsync make
