@@ -16,7 +16,14 @@ host$ make all
 ```
 host$ make runqemu
 ```
-4. cp files from host to qemu
+4a. cp files from host to qemu
 ```
-qemu$ scp -a <user>@<hostip>:<path> .
+qemu$ scp <user>@<hostip>:<file> .
+```
+
+4b. cp files to qemu from host.
+Check which port is for port forwarding. Check the log from step 3. Normally the post is 2222
+
+```
+host$ scp  -P 2222 <file> root@localhost:
 ```
