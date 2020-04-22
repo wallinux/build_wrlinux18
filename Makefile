@@ -36,14 +36,17 @@ DISTRO			?= wrlinux
 LAYERS			+= $(TOP)/layers/meta-tmp
 
 ifeq ($(MACHINE),qemuarm64)
-MULTILIB		= 1
+MULTILIB		?= lib64
 endif
 
 PACKAGES		+= perf openssh rsync make
 ifdef MULTILIB
-PACKAGES		+= lib32-glibc lib32-libgcc lib32-libunwind
-endif
+PACKAGES		+= $(MULTILIB)-glibc $(MULTILIB)-libgcc $(MULTILIB)-libunwind
+BUILDDIR		?= $(OUTDIR)/build_$(MACHINE)_$(MULTILIB)
+else
 BUILDDIR		?= $(OUTDIR)/build_$(MACHINE)
+endif
+
 SSTATE_LOCAL_DIR	?= $(OUTDIR)/sstate-cache
 
 SETUP_OPTS		+= --dl-layers
@@ -167,11 +170,19 @@ ifneq ($(SSTATE_LOCAL_DIR),)
 	$(SED) "s|^\#SSTATE_DIR.*|SSTATE_DIR = \"$(SSTATE_LOCAL_DIR)\"|" $(localconf)
 endif
 
-ifdef MULTILIB
+ifeq ($(MULTILIB),lib32)
 	$(GREP) -q MULTILIBS $(localconf); \
 		if [ $$? = 1 ]; then \
 			echo "MULTILIBS = \"multilib:lib32\"" >> $(localconf); \
 			echo "DEFAULTTUNE_virtclass-multilib-lib32" = \"armv7at-neon\" >> $(localconf); \
+		fi
+endif
+ifeq ($(MULTILIB),lib64)
+	$(GREP) -q MULTILIBS $(localconf); \
+		if [ $$? = 1 ]; then \
+			echo "DEFAULTTUNE = \"armv7at-neon\"" >> $(localconf); \
+			echo "MULTILIBS = \"multilib:$(MULTILIB)\"" >> $(localconf); \
+			echo "DEFAULTTUNE_virtclass-multilib-$(MULTILIB)" = \"aarch64\" >> $(localconf); \
 		fi
 endif
 	$(GREP) -q "SKIP_META_GNOME_SANITY_CHECK" $(localconf) || \
