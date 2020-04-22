@@ -35,9 +35,13 @@ DISTRO			?= wrlinux
 
 LAYERS			+= $(TOP)/layers/meta-tmp
 
+ifeq ($(MACHINE),qemuarm64)
+MULTILIB		= 1
+endif
+
 PACKAGES		+= perf openssh rsync make
 ifdef MULTILIB
-PACKAGES		+= lib32-glibc lib32-libgcc
+PACKAGES		+= lib32-glibc lib32-libgcc lib32-libunwind
 endif
 BUILDDIR		?= $(OUTDIR)/build_$(MACHINE)
 SSTATE_LOCAL_DIR	?= $(OUTDIR)/sstate-cache
