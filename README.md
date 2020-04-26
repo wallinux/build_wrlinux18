@@ -8,11 +8,19 @@ host$ cat hostconfig-arn-build3.mk
 #
 WIND_INSTALL_DIR        ?= /wr/installs/wrl-18-mirror
 ```
-2. build kernel and image
+2a. build kernel, 64-bit multilib rootfs image and sdk
 ```
 host$ make all
 ```
-3. run qemu
+2a. build kernel, 32 bit rootfs image and SDK
+```
+host$ make all.32
+```
+3a. run qemu with 64 bit multilib rootfs
+```
+host$ make runqemu
+```
+3b. run qemu with 32 bit rootfs
 ```
 host$ make runqemu
 ```
