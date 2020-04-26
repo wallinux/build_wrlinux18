@@ -1,10 +1,10 @@
 
 #### TMP DBG
-PACKAGECONFIG = "scripting tui libunwind dwarf"
+#PACKAGECONFIG = "scripting tui libunwind dwarf"
 INHIBIT_PACKAGE_DEBUG_SPLIT="0"
 EXTRA_OEMAKE += ' V=1'
 #EXTRA_OEMAKE += ' EXTRA_CFLAGS="-marm"'
-ARM_INSTRUCTION_SET = "arm"
+#ARM_INSTRUCTION_SET = "arm"
 #### TMP DBG
 
 EXTRA_OEMAKE += '\
