@@ -36,6 +36,7 @@ DISTRO			?= wrlinux
 LAYERS			+= $(TOP)/layers/meta-tmp
 
 PACKAGES		+= perf openssh rsync make
+PACKAGES		+= perf-dbg gdb
 
 ifeq ($(MACHINE),qemuarm64)
 PACKAGES		+= lib32-glibc lib32-libgcc lib32-libunwind
