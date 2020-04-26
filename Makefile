@@ -35,17 +35,14 @@ DISTRO			?= wrlinux
 
 LAYERS			+= $(TOP)/layers/meta-tmp
 
+PACKAGES		+= perf openssh rsync make
+
 ifeq ($(MACHINE),qemuarm64)
-MULTILIB		?= lib32
+PACKAGES		+= lib32-glibc lib32-libgcc lib32-libunwind
+QEMUPARAMS		= "-smp 2"
 endif
 
-PACKAGES		+= perf openssh rsync make
-ifdef MULTILIB
-PACKAGES		+= $(MULTILIB)-glibc $(MULTILIB)-libgcc $(MULTILIB)-libunwind
-BUILDDIR		?= $(OUTDIR)/build_$(MACHINE)_$(MULTILIB)
-else
 BUILDDIR		?= $(OUTDIR)/build_$(MACHINE)
-endif
 
 SSTATE_LOCAL_DIR	?= $(OUTDIR)/sstate-cache
 
@@ -109,9 +106,25 @@ all:: configure # build image and SDK
 	$(MAKE) image
 	$(MAKE) sdk
 
+all.32:: configure # build 32 bit image and SDK
+	$(TRACE)
+	$(MAKE) image.32
+	$(MAKE) sdk
+
+ALL:
+	$(TRACE)
+	$(MAKE) image
+	$(MAKE) image.32
+	$(MAKE) sdk
+	$(MAKE) sdk.install
+
 image: configure # build image
 	$(TRACE)
 	$(call bitbake,$(IMAGE))
+
+image.32: configure # build 32 bit image
+	$(TRACE)
+	$(call bitbake,lib32-$(IMAGE))
 
 kernel: configure # build kernel
 	$(TRACE)
@@ -134,12 +147,13 @@ bbsterm: configure # start gnome-terminal in build directory
 	$(TRACE)
 	$(call bbterm,bash)
 
-runqemu: configure # run qemu
+runqemu: configure # run qemu 64 bit multilib userspace
 	$(TRACE)
-ifeq ($(MACHINE),qemuarm64)
-	$(eval QEMUPARAMS="-smp 2")
-endif
-	-$(BBPREP) runqemu $(MACHINE) nographic slirp qemuparams=$(QEMUPARAMS)
+	-$(BBPREP) runqemu $(MACHINE) nographic slirp qemuparams=$(QEMUPARAMS) $(BUILDDIR)/tmp-glibc/deploy/images/$(MACHINE)/$(IMAGE)-$(MACHINE).qemuboot.conf
+
+runqemu.32: configure # run qemu with 32 bit userspace
+	$(TRACE)
+	-$(BBPREP) runqemu $(MACHINE) nographic slirp qemuparams=$(QEMUPARAMS) $(BUILDDIR)/tmp-glibc/deploy/images/$(MACHINE)/lib32-$(IMAGE)-$(MACHINE).qemuboot.conf
 
 $(OUTDIR):
 	$(TRACE)
@@ -170,19 +184,11 @@ ifneq ($(SSTATE_LOCAL_DIR),)
 	$(SED) "s|^\#SSTATE_DIR.*|SSTATE_DIR = \"$(SSTATE_LOCAL_DIR)\"|" $(localconf)
 endif
 
-ifeq ($(MULTILIB),lib32)
+ifeq ($(MACHINE),qemuarm64)
 	$(GREP) -q MULTILIBS $(localconf); \
 		if [ $$? = 1 ]; then \
 			echo "MULTILIBS = \"multilib:lib32\"" >> $(localconf); \
 			echo "DEFAULTTUNE_virtclass-multilib-lib32" = \"armv7at-neon\" >> $(localconf); \
-		fi
-endif
-ifeq ($(MULTILIB),lib64)
-	$(GREP) -q MULTILIBS $(localconf); \
-		if [ $$? = 1 ]; then \
-			echo "DEFAULTTUNE = \"armv7at-neon\"" >> $(localconf); \
-			echo "MULTILIBS = \"multilib:$(MULTILIB)\"" >> $(localconf); \
-			echo "DEFAULTTUNE_virtclass-multilib-$(MULTILIB)" = \"aarch64\" >> $(localconf); \
 		fi
 endif
 	$(GREP) -q "SKIP_META_GNOME_SANITY_CHECK" $(localconf) || \
