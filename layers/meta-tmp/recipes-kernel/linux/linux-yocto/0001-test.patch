@@ -1,61 +1,27 @@
-From a61c36616aaca0a045a2684c15810b21f68a2af6 Mon Sep 17 00:00:00 2001
+From 8084eac8ca4a2e5768af95f2bc8e32a15dece372 Mon Sep 17 00:00:00 2001
 From: Jiping Ma <jiping.ma2@windriver.com>
-Date: Thu, 9 Apr 2020 17:27:03 +0800
+Date: Wed, 29 Apr 2020 11:08:28 +0800
 Subject: [PATCH] test
 
 ---
- arch/arm/kernel/perf_callchain.c | 31 ++++++++++++++++++++++++++++---
- 1 file changed, 28 insertions(+), 3 deletions(-)
+ arch/arm64/kernel/perf_regs.c | 4 ++++
+ 1 file changed, 4 insertions(+)
 
-diff --git a/arch/arm/kernel/perf_callchain.c b/arch/arm/kernel/perf_callchain.c
-index 08e43a3..ffd95a1 100644
---- a/arch/arm/kernel/perf_callchain.c
-+++ b/arch/arm/kernel/perf_callchain.c
-@@ -60,6 +60,25 @@ struct frame_tail {
+diff --git a/arch/arm64/kernel/perf_regs.c b/arch/arm64/kernel/perf_regs.c
+index 0bbac61..0a3f022 100644
+--- a/arch/arm64/kernel/perf_regs.c
++++ b/arch/arm64/kernel/perf_regs.c
+@@ -32,6 +32,10 @@ u64 perf_reg_value(struct pt_regs *regs, int idx)
+ 	if ((u32)idx == PERF_REG_ARM64_PC)
+ 		return regs->pc;
+ 
++	if (PERF_SAMPLE_REGS_ABI_32 == perf_reg_abi(current)
++		&& idx == 15)
++		return regs->regs[PERF_REG_ARM64_PC];
++
+ 	return regs->regs[idx];
  }
  
- void
-+user_backtrace_thumb(struct perf_callchain_entry_ctx *entry, struct pt_regs *regs)
-+{
-+	unsigned long sp;
-+	unsigned long *sp_t;
-+
-+	for (sp = regs->ARM_sp; (sp < current->mm->start_stack) &&
-+                        (entry->nr < entry->max_stack); sp += 4) {
-+		sp_t = (unsigned long *)sp;
-+		if ((*sp_t > regs->ARM_sp) && (*sp_t < current->mm->start_stack)) {
-+			if (*(sp_t + 1) < current->mm->end_code &&
-+				*(sp_t + 1) > current->mm->start_code) {
-+				perf_callchain_store(entry,  *(sp_t + 1)-1);
-+				sp += 4;
-+			}
-+		}
-+	}
-+}
-+
-+void
- perf_callchain_user(struct perf_callchain_entry_ctx *entry, struct pt_regs *regs)
- {
- 	struct frame_tail __user *tail;
-@@ -76,9 +95,15 @@ struct frame_tail {
- 
- 	tail = (struct frame_tail __user *)regs->ARM_fp - 1;
- 
--	while ((entry->nr < entry->max_stack) &&
--	       tail && !((unsigned long)tail & 0x3))
--		tail = user_backtrace(tail, entry);
-+	if (((unsigned long)tail > current->mm->start_stack) ||
-+		        ((unsigned long)tail < regs->ARM_sp) ||
-+		 (regs->ARM_sp ==  regs->ARM_r7)) {
-+		user_backtrace_thumb(entry, regs);
-+	} else {
-+		while ((entry->nr < entry->max_stack) &&
-+		       tail && !((unsigned long)tail & 0x3))
-+			tail = user_backtrace(tail, entry);
-+	}
- }
- 
- /*
 -- 
 1.9.1
 
