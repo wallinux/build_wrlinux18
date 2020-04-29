@@ -3,7 +3,7 @@
 default: help
 
 # Default settings
-HOSTNAME 		?= $(shell hostname)
+HOSTNAME		?= $(shell hostname)
 USER			?= $(shell whoami)
 HOST_ARCH		?= $(shell uname -m)
 
@@ -26,7 +26,7 @@ LTS_VER			?= lts$(WIND_VER)
 RCPL			?= 16
 DISTRO_VERSION		= 10.$(WIND_VER).44.$(RCPL)
 RCPL_LONG		= $(shell printf "%04d" $(RCPL))
-WIND_REL 		= WRLINUX_10_$(WIND_VER)_LTS_RCPL$(RCPL_LONG)
+WIND_REL		= WRLINUX_10_$(WIND_VER)_LTS_RCPL$(RCPL_LONG)
 OUTDIR			?= $(TOP)/out_$(LTS_VER).$(RCPL)
 
 MACHINE			?= qemuarm64
@@ -40,7 +40,7 @@ PACKAGES		+= perf-dbg gdb
 
 ifeq ($(MACHINE),qemuarm64)
 PACKAGES		+= lib32-glibc lib32-libgcc lib32-libunwind
-QEMUPARAMS		= "-smp 2"
+QEMUPARAMS		= '-smp 2'
 endif
 
 BUILDDIR		?= $(OUTDIR)/build_$(MACHINE)
@@ -86,7 +86,6 @@ define bbterm
 endef
 
 ##########################################################################
-
 .PHONY:: help all kernel clean distclean bbs make/* update
 .FORCE:
 
@@ -148,14 +147,6 @@ bbsterm: configure # start gnome-terminal in build directory
 	$(TRACE)
 	$(call bbterm,bash)
 
-runqemu: configure # run qemu 64 bit multilib userspace
-	$(TRACE)
-	-$(BBPREP) runqemu $(MACHINE) nographic slirp qemuparams=$(QEMUPARAMS) $(BUILDDIR)/tmp-glibc/deploy/images/$(MACHINE)/$(IMAGE)-$(MACHINE).qemuboot.conf
-
-runqemu.32: configure # run qemu with 32 bit userspace
-	$(TRACE)
-	-$(BBPREP) runqemu $(MACHINE) nographic slirp qemuparams=$(QEMUPARAMS) $(BUILDDIR)/tmp-glibc/deploy/images/$(MACHINE)/lib32-$(IMAGE)-$(MACHINE).qemuboot.conf
-
 $(OUTDIR):
 	$(TRACE)
 	$(MKDIR) $@
@@ -207,8 +198,7 @@ distclean:: # clean out directory
 	$(RM) -r $(OUTDIR)
 
 ##########################################################################
-
-SDK_FILE 		?= $(BUILDDIR)/tmp-glibc/deploy/sdk/$(DISTRO)-$(DISTRO_VERSION)-glibc-$(HOST_ARCH)-$(subst -,_,$(MACHINE))-$(IMAGE)-sdk.sh
+SDK_FILE		?= $(BUILDDIR)/tmp-glibc/deploy/sdk/$(DISTRO)-$(DISTRO_VERSION)-glibc-$(HOST_ARCH)-$(subst -,_,$(MACHINE))-$(IMAGE)-sdk.sh
 SDK_DIR			?= $(OUTDIR)/sdk/$(MACHINE)
 
 .PHONY:: sdk sdk.*
@@ -227,4 +217,34 @@ sdk.clean: # remove installed sdk
 	$(TRACE)
 	$(RM) -r $(SDK_DIR)
 
+##########################################################################
+runqemu: # run qemu 64 bit multilib userspace
+	$(TRACE)
+	-$(BBPREP) runqemu $(MACHINE) nographic slirp qemuparams=$(QEMUPARAMS) tmp-glibc/deploy/images/$(MACHINE)/$(IMAGE)-$(MACHINE).qemuboot.conf
 
+runqemu.32: # run qemu with 32 bit userspace
+	$(TRACE)
+	-$(BBPREP) runqemu $(MACHINE) nographic slirp qemuparams=$(QEMUPARAMS) tmp-glibc/deploy/images/$(MACHINE)/lib32-$(IMAGE)-$(MACHINE).qemuboot.conf
+
+runqemuterm: # new terminal, run qemu 64 bit multilib userspace
+	$(TRACE)
+	$(call bbterm,runqemu $(MACHINE) nographic slirp qemuparams=$(QEMUPARAMS) tmp-glibc/deploy/images/$(MACHINE)/$(IMAGE)-$(MACHINE).qemuboot.conf)
+
+runqemuterm.32: # new terminal, run qemu with 32 bit userspace
+	$(TRACE)
+	$(call bbterm,runqemu $(MACHINE) nographic slirp qemuparams=$(QEMUPARAMS) tmp-glibc/deploy/images/$(MACHINE)/lib32-$(IMAGE)-$(MACHINE).qemuboot.conf)
+
+SSHPORT ?= 2222
+qemu.ssh:
+	$(TRACE)
+	$(SSH) -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@localhost -p $(SSHPORT)
+
+qemu.sshfs.mount:
+	$(TRACE)
+	$(MKDIR) $(MACHINE).sshfs
+	$(Q)sshfs -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p $(SSHPORT) root@localhost:  $(MACHINE).sshfs
+
+qemu.sshfs.umount:
+	$(TRACE)
+	$(Q)fusermount -u $(MACHINE).sshfs
+	$(Q)rmdir $(MACHINE).sshfs
