@@ -1,0 +1,33 @@
+From 0885372f37ed56b2185fb02e7d45e0b7e3b16089 Mon Sep 17 00:00:00 2001
+Message-Id: <0885372f37ed56b2185fb02e7d45e0b7e3b16089.1588155860.git.anders.wallin@windriver.com>
+From: Jiping Ma <jiping.ma2@windriver.com>
+Date: Wed, 29 Apr 2020 12:01:51 +0800
+Subject: [PATCH] perf: perf can not parser the backtrace of app in the 32bit
+ system and 64bit kernel.
+
+Record PC value from regs[15], it should be regs[32], which cause perf
+parser the backtrace failed.
+
+Signed-off-by: Jiping Ma <jiping.ma2@windriver.com>
+---
+ arch/arm64/kernel/perf_regs.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/arch/arm64/kernel/perf_regs.c b/arch/arm64/kernel/perf_regs.c
+index 0bbac612146ea..04088e6b6092d 100644
+--- a/arch/arm64/kernel/perf_regs.c
++++ b/arch/arm64/kernel/perf_regs.c
+@@ -32,6 +32,10 @@ u64 perf_reg_value(struct pt_regs *regs, int idx)
+ 	if ((u32)idx == PERF_REG_ARM64_PC)
+ 		return regs->pc;
+ 
++	if (perf_reg_abi(current) == PERF_SAMPLE_REGS_ABI_32
++		&& idx == 15)
++		return regs->regs[PERF_REG_ARM64_PC];
++
+ 	return regs->regs[idx];
+ }
+ 
+-- 
+2.26.2
+
