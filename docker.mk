@@ -71,6 +71,9 @@ docker.make:
 	$(IF) [ -z $(docker_image_id) ]; then make --no-print-directory docker.build; fi
 	$(DOCKER) create -P --name $(DOCKER_CONTAINER) \
 		$(DOCKER_MOUNTS) \
+		--ipc host \
+		--net host \
+		--privileged \
 		-h $(DOCKER_HOSTNAME) \
 		-e INSIDE_DOCKER=yes \
 		-i $(DOCKER_IMAGE):$(DOCKER_DT) $(DEVNULL)
