@@ -30,7 +30,7 @@ WIND_REL		= WRLINUX_10_$(WIND_VER)_LTS_RCPL$(RCPL_LONG)
 OUTDIR			?= $(TOP)/out_$(LTS_VER).$(RCPL)
 
 MACHINE			?= qemuarm64
-IMAGE			?= wrlinux-image-glibc-std
+IMAGE			?= wrlinux-image-glibc-small
 DISTRO			?= wrlinux
 
 LAYERS			+= $(TOP)/layers/meta-tmp
