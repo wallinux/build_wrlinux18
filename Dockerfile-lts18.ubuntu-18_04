@@ -1,0 +1,33 @@
+FROM ubuntu:18.04 AS wrlinux
+MAINTAINER Anders Wallin
+
+WORKDIR /root
+
+ENV TERM xterm
+ENV DEBIAN_FRONTEND noninteractive
+
+RUN dpkg --add-architecture i386
+RUN apt-get update
+RUN DEBIAN_FRONTEND=noninteractive; apt-get -y upgrade
+RUN DEBIAN_FRONTEND=noninteractive; apt-get install -y apt-utils locales
+
+# Set the locale
+RUN locale-gen en_US.UTF-8
+ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US:en
+ENV LC_ALL en_US.UTF-8
+
+ADD docker-pkg_install.sh /root/docker-pkg_install.sh
+RUN /root/docker-pkg_install.sh --install --yes
+RUN rm /root/docker-pkg_install.sh
+
+RUN DEBIAN_FRONTEND=noninteractive; apt-get install -y cpio
+
+ENTRYPOINT ["/bin/sh"]
+
+###############################################################
+FROM wrlinux AS rcs
+
+RUN DEBIAN_FRONTEND=noninteractive; apt-get install -y \
+    sshpass moreutils bc python-pexpect \
+    expect telnet socat bsdmainutils emacs tmux tig rsync lsb-release

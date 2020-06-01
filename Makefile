@@ -248,3 +248,5 @@ qemu.sshfs.umount:
 	$(TRACE)
 	$(Q)fusermount -u $(MACHINE).sshfs
 	$(Q)rmdir $(MACHINE).sshfs
+
+-include docker.mk
