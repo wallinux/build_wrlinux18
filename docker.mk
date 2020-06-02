@@ -81,20 +81,20 @@ docker.make:
 
 docker.config:
 	$(TRACE)
-	$(eval hostconfig=make/hostconfig-$(DOCKER_HOSTNAME).mk)
-	$(GREP) -v -e "^\#" make/hostconfig-$(HOSTNAME).mk > $(hostconfig)
-	$(LN) userconfig-$(DOCKERHOST)-jenkins.mk make/userconfig-$(DOCKER_HOSTNAME)-jenkins.mk
-	$(IF) [ -e make/hostconfig-$(DOCKERHOST).mk ]; then \
+	$(eval hostconfig=hostconfig-$(DOCKER_HOSTNAME).mk)
+	$(GREP) -v -e "^\#" hostconfig-$(HOSTNAME).mk > $(hostconfig)
+	$(LN) userconfig-$(DOCKERHOST)-jenkins.mk userconfig-$(DOCKER_HOSTNAME)-jenkins.mk
+	$(IF) [ -e hostconfig-$(DOCKERHOST).mk ]; then \
 		echo "# $(DOCKER_CONFIG)" > $(DOCKER_CONFIG); \
-		grep "^WIND_INSTALL_DIR" make/hostconfig-$(DOCKERHOST).mk >> $(DOCKER_CONFIG); \
+		grep "^WIND_INSTALL_DIR" hostconfig-$(DOCKERHOST).mk >> $(DOCKER_CONFIG); \
 		echo "# end" >> $(DOCKER_CONFIG); \
 	else \
-		rm -f make/dockerconfig.mk; \
+		rm -f dockerconfig.mk; \
 	fi
 
 docker.create: # create docker container
 	$(TRACE)
-	#$(MAKE) docker.config
+	$(MAKE) docker.config
 	$(DOCKER_CONTAINER_ID)
 	$(IF) [ -z $(docker_container_id) ]; then make --no-print-directory docker.make; fi
 
@@ -140,8 +140,8 @@ docker.make.%: docker.start docker.make.config # Run make inside docker, e.g. ma
 docker.clean: # stop and remove docker container and remove configs
 	$(MAKE) docker.rm
 	$(RM) $(DOCKER_CONFIG)
-	$(RM) make/userconfig-$(DOCKER_HOSTNAME)-jenkins.mk
-	$(RM) make/hostconfig-$(DOCKER_HOSTNAME).mk
+	$(RM) userconfig-$(DOCKER_HOSTNAME)-jenkins.mk
+	$(RM) hostconfig-$(DOCKER_HOSTNAME).mk
 
 docker.distclean: docker.rmi
 
@@ -149,7 +149,7 @@ docker.help:
 	$(DOCKER_IMAGE_ID)
 	$(DOCKER_CONTAINER_ID)
 	$(DOCKER_CONTAINER_RUNNING)
-	$(call run-help, make/docker.mk)
+	$(call run-help, docker.mk)
 	$(GREEN)
 	$(ECHO) "\n DOCKER_DISTRO=$(DOCKER_DISTRO):$(DOCKER_DISTRO_VER)"
 	$(ECHO) " IMAGE=$(DOCKER_IMAGE):$(DOCKER_DT) id=$(docker_image_id)"
