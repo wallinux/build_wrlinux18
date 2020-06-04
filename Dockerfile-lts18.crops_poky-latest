@@ -1,0 +1,4 @@
+FROM crops/poky:latest
+MAINTAINER Anders Wallin
+
+ENTRYPOINT ["/bin/sh"]

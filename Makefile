@@ -20,6 +20,7 @@ configure:: Makefile.configure
 -include userconfig-$(USER).mk
 
 TOP			:= $(shell pwd)
+PROJECT			?= build_wrlinux18
 WIND_INSTALL_DIR	?= /opt/projects/ericsson/installs/wrlinux_lts18
 WIND_VER		?= 18
 LTS_VER			?= lts$(WIND_VER)

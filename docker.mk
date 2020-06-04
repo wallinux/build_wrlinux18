@@ -1,24 +1,33 @@
 # docker.mk
+
+ifdef CROPS
+DOCKER_DISTRO		?= crops_poky
+DOCKER_DISTRO_VER	?= latest
+else
 DOCKER_DISTRO		?= ubuntu
 DOCKER_DISTRO_VER	?= 18_04
+endif
 DOCKER_DT		?= $(DOCKER_DISTRO)-$(DOCKER_DISTRO_VER)
 DOCKER_BASE		?= $(shell basename $(TOP))
 DOCKER_CONTAINER	?= $(USER)_$(LTS_VER)_$(DOCKER_BASE)_$(DOCKER_DT)
-DOCKER_IMAGE		?= $(USER)_$(LTS_VER)
+DOCKER_IMAGE_REPO	?= $(USER)_$(LTS_VER)_$(DOCKER_DISTRO)_$(DOCKER_DISTRO_VER)
+DOCKER_IMAGE_TAG	?= $(PROJECT)
+DOCKER_IMAGE		?= $(DOCKER_IMAGE_REPO):$(DOCKER_IMAGE_TAG)
 DOCKER_BUILDDIR		= $(OUTDIR)/build_docker_$(MACHINE)
-DOCKER_HOSTNAME		?= docker-$(LTS_VER).$(DOCKER_DT).eprime.com
+DOCKER_HOSTNAME		?= $(LTS_VER)_$(DOCKER_DT).eprime.com
 DOCKER_CONFIG		?= dockerconfig.mk
 DOCKER_BUILDARGS	?=
 
-DOCKER			?= $(Q)docker
+DOCKER			?= docker
+MDOCKER			?= $(Q)$(DOCKER)
 
 define run-docker-exec
-	$(DOCKER) exec -u $(1) $(2) $(DOCKER_CONTAINER) $(3)
+	$(MDOCKER) exec -u $(1) $(2) $(DOCKER_CONTAINER) $(3)
 endef
 
-DOCKER_CONTAINER_RUNNING = $(eval docker_container_running=$(shell docker inspect -f {{.State.Running}} $(DOCKER_CONTAINER)))
-DOCKER_CONTAINER_ID      = $(eval docker_container_id=$(shell docker ps -a -q -f name=$(DOCKER_CONTAINER)))
-DOCKER_IMAGE_ID          = $(eval docker_image_id=$(shell docker images -q $(DOCKER_IMAGE):$(DOCKER_DT) 2> /dev/null))
+DOCKER_CONTAINER_RUNNING = $(eval docker_container_running=$(shell $(DOCKER) inspect -f {{.State.Running}} $(DOCKER_CONTAINER)))
+DOCKER_CONTAINER_ID      = $(eval docker_container_id=$(shell $(DOCKER) ps -a -q -f name=$(DOCKER_CONTAINER)))
+DOCKER_IMAGE_ID          = $(eval docker_image_id=$(shell $(DOCKER) images -q $(DOCKER_IMAGE) 2> /dev/null))
 
 ifneq ("$(wildcard $(HOME)/dockerhost)","")
 DOCKERHOST		?= $(shell cat $$HOME/dockerhost)
@@ -42,48 +51,55 @@ docker.build: Dockerfile-$(LTS_VER).$(DOCKER_DT) # build docker image
 ifneq ($(V),1)
 	$(eval quiet=-q)
 endif
-	$(DOCKER) build $(quiet) $(DOCKER_BUILDARGS) --pull -f $< \
-		-t "$(DOCKER_IMAGE):$(DOCKER_DT)" $(TOP)
+	$(MDOCKER) build $(quiet) $(DOCKER_BUILDARGS) --pull -f $< \
+		-t "$(DOCKER_IMAGE)" $(TOP)
 
 docker.prepare.ubuntu::
 	$(TRACE)
+	$(eval host_timezone=$(shell cat /etc/timezone))
 	$(call run-docker-exec, root, , sh -c "echo $(host_timezone) > /etc/timezone" )
 	$(call run-docker-exec, root, , ln -sfn /usr/share/zoneinfo/$(host_timezone) /etc/localtime )
 	$(call run-docker-exec, root, , dpkg-reconfigure -f noninteractive tzdata 2> /dev/null)
 	$(call run-docker-exec, root, , sh -c "ln -sfn /bin/bash /bin/sh" )
 
+docker.prepare.crops_poky::
+	$(TRACE)
+	$(eval host_timezone=$(shell cat /etc/timezone))
+	$(call run-docker-exec, root, , sh -c "apt install -y locales" )
+	$(call run-docker-exec, root, , sh -c "DEBIAN_FRONTEND=noninteractive apt install -y tzdata" )
+	$(MAKE) docker.prepare.ubuntu
+
 docker.prepare.fedora:
 	$(TRACE)
+	$(eval host_timezone=$(shell cat /etc/timezone))
 	$(call run-docker-exec, root, , sh -c "echo $(host_timezone) > /etc/timezone" )
 
 docker.prepare:
 	$(TRACE)
-	$(DOCKER) start $(DOCKER_CONTAINER) $(DEVNULL)
-	$(eval host_timezone=$(shell cat /etc/timezone))
+	$(MDOCKER) start $(DOCKER_CONTAINER) $(DEVNULL)
 	$(call run-docker-exec, root, , groupadd -f -g $(shell id -g) $(shell id -gn) )
 	$(call run-docker-exec, root, , useradd --shell /bin/sh -M -d $(HOME) -u $(shell id -u) $(USER) -g $(shell id -g) )
 	$(MAKE) docker.prepare.$(DOCKER_DISTRO)
 	$(MAKE) docker.stop
 
+DOCKER_OPTS ?= --ipc host --net host --privileged
+
 docker.make:
 	$(TRACE)
 	$(DOCKER_IMAGE_ID)
 	$(IF) [ -z $(docker_image_id) ]; then make --no-print-directory docker.build; fi
-	$(DOCKER) create -P --name $(DOCKER_CONTAINER) \
+	$(MDOCKER) create -P --name $(DOCKER_CONTAINER) \
 		$(DOCKER_MOUNTS) \
-		--ipc host \
-		--net host \
-		--privileged \
+		$(DOCKER_OPTS) \
 		-h $(DOCKER_HOSTNAME) \
 		-e INSIDE_DOCKER=yes \
-		-i $(DOCKER_IMAGE):$(DOCKER_DT) $(DEVNULL)
+		-i $(DOCKER_IMAGE) $(DEVNULL)
 	$(MAKE) docker.prepare
 
 docker.config:
 	$(TRACE)
 	$(eval hostconfig=hostconfig-$(DOCKER_HOSTNAME).mk)
 	$(GREP) -v -e "^\#" hostconfig-$(HOSTNAME).mk > $(hostconfig)
-	$(LN) userconfig-$(DOCKERHOST)-jenkins.mk userconfig-$(DOCKER_HOSTNAME)-jenkins.mk
 	$(IF) [ -e hostconfig-$(DOCKERHOST).mk ]; then \
 		echo "# $(DOCKER_CONFIG)" > $(DOCKER_CONFIG); \
 		grep "^WIND_INSTALL_DIR" hostconfig-$(DOCKERHOST).mk >> $(DOCKER_CONFIG); \
@@ -100,23 +116,23 @@ docker.create: # create docker container
 
 docker.start: docker.create # start docker container
 	$(TRACE)
-	$(DOCKER) start $(DOCKER_CONTAINER) $(DEVNULL)
+	$(MDOCKER) start $(DOCKER_CONTAINER) $(DEVNULL)
 
 docker.stop: # stop docker container
 	$(TRACE)
-	$(DOCKER) stop -t 1 $(DOCKER_CONTAINER) $(DEVNULL) || true
+	$(MDOCKER) stop -t 1 $(DOCKER_CONTAINER) $(DEVNULL) || true
 
 docker.rm: docker.stop # remove docker container
 	$(TRACE)
-	$(DOCKER) rm $(DOCKER_CONTAINER) $(DEVNULL)
+	$(MDOCKER) rm $(DOCKER_CONTAINER) $(DEVNULL)
 
 docker.rmi: # remove docker image
 	$(TRACE)
-	$(DOCKER) rmi $(DOCKER_IMAGE):$(DOCKER_DT)
+	$(MDOCKER) rmi $(DOCKER_IMAGE)
 
 docker.shell: docker.make.config docker.start # start docker shell as $(USER)
 	$(TRACE)
-	$(call run-docker-exec, $(USER), -it, /bin/sh -c "cd $(TOP); MACHINE=$(MACHINE) PROJECT=$(PROJECT) exec /bin/bash")
+	$(call run-docker-exec, $(USER), -it, /bin/sh -c "cd $(TOP); exec /bin/bash")
 
 docker.rootshell: docker.start # start docker shell as root
 	$(TRACE)
@@ -140,7 +156,6 @@ docker.make.%: docker.start docker.make.config # Run make inside docker, e.g. ma
 docker.clean: # stop and remove docker container and remove configs
 	$(MAKE) docker.rm
 	$(RM) $(DOCKER_CONFIG)
-	$(RM) userconfig-$(DOCKER_HOSTNAME)-jenkins.mk
 	$(RM) hostconfig-$(DOCKER_HOSTNAME).mk
 
 docker.distclean: docker.rmi
@@ -152,7 +167,7 @@ docker.help:
 	$(call run-help, docker.mk)
 	$(GREEN)
 	$(ECHO) "\n DOCKER_DISTRO=$(DOCKER_DISTRO):$(DOCKER_DISTRO_VER)"
-	$(ECHO) " IMAGE=$(DOCKER_IMAGE):$(DOCKER_DT) id=$(docker_image_id)"
+	$(ECHO) " IMAGE=$(DOCKER_IMAGE) id=$(docker_image_id)"
 	$(ECHO) " CONTAINER=$(DOCKER_CONTAINER) id=$(docker_container_id) running=$(docker_container_running)"
 	$(ECHO) " BUILDDIR=$(BUILDDIR)"
 	$(ECHO) " DOCKERHOST=$(DOCKERHOST)"
