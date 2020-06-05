@@ -251,3 +251,4 @@ qemu.sshfs.umount:
 	$(Q)rmdir $(MACHINE).sshfs
 
 -include docker.mk
+-include podman.mk

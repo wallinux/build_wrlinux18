@@ -1,5 +1,6 @@
 # arn-awallin-linux-l5 host config file
 #
+ifndef INSIDE_CONTAINER
 SSTATE_SSHFS_REMOTE	?= ab3:/opt/awallin/src/build_wrlinux18/out_lts18.16/sstate-cache
 SSTATE_SSHFS_MOUNT	?= $(TOP)/sstate_mirror_mount
 SSTATE_MIRROR_URL 	?= file://$(SSTATE_SSHFS_MOUNT)
@@ -25,3 +26,4 @@ $(HOSTNAME).unconfigure: sshfs.umount
 	$(TRACE)
 
 configure:: $(HOSTNAME).configure
+endif

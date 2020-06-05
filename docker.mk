@@ -92,7 +92,7 @@ docker.make:
 		$(DOCKER_MOUNTS) \
 		$(DOCKER_OPTS) \
 		-h $(DOCKER_HOSTNAME) \
-		-e INSIDE_DOCKER=yes \
+		-e INSIDE_CONTAINER=yes \
 		-i $(DOCKER_IMAGE) $(DEVNULL)
 	$(MAKE) docker.prepare
 
