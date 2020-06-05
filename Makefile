@@ -250,5 +250,6 @@ qemu.sshfs.umount:
 	$(Q)fusermount -u $(MACHINE).sshfs
 	$(Q)rmdir $(MACHINE).sshfs
 
--include docker.mk
--include podman.mk
+#-include docker.mk
+#-include podman.mk
+-include container.mk
