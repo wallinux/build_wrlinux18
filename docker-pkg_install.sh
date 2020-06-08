@@ -42,6 +42,9 @@ U1604_x86_64='libc6:i386 libc6-dev-i386 libncurses5:i386 texi2html chrpath diffs
 #Ubuntu 18.04 x86_64
 U1804_x86_64='libc6:i386 libc6-dev-i386 libncurses5:i386 texi2html chrpath diffstat subversion libgl1-mesa-dev libglu1-mesa-dev libsdl1.2-dev texinfo gawk gcc gcc-multilib help2man g++ git-core python-gtk2 bash diffutils xz-utils make file screen bzip2 wget'
 
+#Ubuntu 19.10 x86_64
+U1910_x86_64='libc6:i386 libc6-dev-i386 libncurses5:i386 texi2html chrpath diffstat subversion libgl1-mesa-dev libglu1-mesa-dev libsdl1.2-dev texinfo gawk gcc gcc-multilib help2man g++ git-core bash diffutils xz-utils make file screen bzip2 wget'
+
 #Ubuntu 20.04 x86_64
 U2004_x86_64='libc6:i386 libc6-dev-i386 libncurses5:i386 texi2html chrpath diffstat subversion libgl1-mesa-dev libglu1-mesa-dev libsdl1.2-dev texinfo gawk gcc gcc-multilib help2man g++ git-core bash diffutils xz-utils make file screen bzip2 wget'
 

@@ -19,6 +19,3 @@ ENV LC_ALL en_US.UTF-8
 ADD docker-pkg_install.sh /root/docker-pkg_install.sh
 RUN /root/docker-pkg_install.sh --install --yes
 RUN rm /root/docker-pkg_install.sh
-
-RUN apt install -y sshpass moreutils bc python-pexpect \
-    expect telnet socat bsdmainutils emacs tmux tig rsync lsb-release

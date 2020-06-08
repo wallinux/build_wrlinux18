@@ -9,7 +9,7 @@ CONTAINER_DISTRO_VER	?= 18_04
 endif
 CONTAINER_DT		?= $(CONTAINER_DISTRO)-$(CONTAINER_DISTRO_VER)
 CONTAINER_BASE		?= $(shell basename $(TOP))
-CONTAINER_CONTAINER	?= $(USER)_$(LTS_VER)_$(CONTAINER_BASE)_$(CONTAINER_DT)
+CONTAINER_NAME		?= $(USER)_$(LTS_VER)_$(CONTAINER_BASE)_$(CONTAINER_DT)
 CONTAINER_IMAGE_REPO	?= $(USER)_$(LTS_VER)_$(CONTAINER_DISTRO)_$(CONTAINER_DISTRO_VER)
 CONTAINER_IMAGE_TAG	?= $(PROJECT)
 CONTAINER_IMAGE		?= $(CONTAINER_IMAGE_REPO):$(CONTAINER_IMAGE_TAG)
@@ -22,12 +22,12 @@ CONTAINER		?= docker
 MCONTAINER		?= $(Q)$(CONTAINER)
 
 define run-container-exec
-	$(MCONTAINER) exec -u $(1) $(2) $(CONTAINER_CONTAINER) $(3)
+	$(MCONTAINER) exec -u $(1) $(2) $(CONTAINER_NAME) $(3)
 endef
 
-CONTAINER_CONTAINER_RUNNING = $(eval container_container_running=$(shell $(CONTAINER) inspect -f {{.State.Running}} $(CONTAINER_CONTAINER)))
-CONTAINER_CONTAINER_ID      = $(eval container_container_id=$(shell $(CONTAINER) ps -a -q -f name=$(CONTAINER_CONTAINER)))
-CONTAINER_IMAGE_ID          = $(eval container_image_id=$(shell $(CONTAINER) images -q $(CONTAINER_IMAGE) 2> /dev/null))
+CONTAINER_NAME_RUNNING	= $(eval container_name_running=$(shell $(CONTAINER) inspect -f {{.State.Running}} $(CONTAINER_NAME)))
+CONTAINER_NAME_ID	= $(eval container_name_id=$(shell $(CONTAINER) ps -a -q -f name=$(CONTAINER_NAME)))
+CONTAINER_IMAGE_ID	= $(eval container_image_id=$(shell $(CONTAINER) images -q $(CONTAINER_IMAGE) 2> /dev/null))
 
 ifneq ("$(wildcard $(HOME)/containerhost)","")
 CONTAINERHOST		?= $(shell cat $$HOME/containerhost)
@@ -64,7 +64,6 @@ container.prepare.ubuntu::
 
 container.prepare.crops_poky::
 	$(TRACE)
-	$(eval host_timezone=$(shell cat /etc/timezone))
 	$(call run-container-exec, root, , sh -c "apt install -y locales" )
 	$(call run-container-exec, root, , sh -c "DEBIAN_FRONTEND=noninteractive apt install -y tzdata" )
 	$(MAKE) container.prepare.ubuntu
@@ -76,7 +75,7 @@ container.prepare.fedora:
 
 container.prepare:
 	$(TRACE)
-	$(MCONTAINER) start $(CONTAINER_CONTAINER) $(DEVNULL)
+	$(MCONTAINER) start $(CONTAINER_NAME) $(DEVNULL)
 	$(call run-container-exec, root, , groupadd -f -g $(shell id -g) $(shell id -gn) )
 	$(call run-container-exec, root, , useradd --shell /bin/sh -M -d $(HOME) -u $(shell id -u) $(USER) -g $(shell id -g) )
 	$(MAKE) container.prepare.$(CONTAINER_DISTRO)
@@ -88,7 +87,7 @@ container.make:
 	$(TRACE)
 	$(CONTAINER_IMAGE_ID)
 	$(IF) [ -z $(container_image_id) ]; then make --no-print-directory container.build; fi
-	$(MCONTAINER) create -P --name $(CONTAINER_CONTAINER) \
+	$(MCONTAINER) create -P --name $(CONTAINER_NAME) \
 		$(CONTAINER_MOUNTS) \
 		$(CONTAINER_OPTS) \
 		-h $(CONTAINER_HOSTNAME) \
@@ -111,24 +110,28 @@ container.config:
 container.create: # create container container
 	$(TRACE)
 	$(MAKE) container.config
-	$(CONTAINER_CONTAINER_ID)
-	$(IF) [ -z $(container_container_id) ]; then make --no-print-directory container.make; fi
+	$(CONTAINER_NAME_ID)
+	$(IF) [ -z $(container_name_id) ]; then make --no-print-directory container.make; fi
 
 container.start: container.create # start container container
 	$(TRACE)
-	$(MCONTAINER) start $(CONTAINER_CONTAINER) $(DEVNULL)
+	$(MCONTAINER) start $(CONTAINER_NAME) $(DEVNULL)
 
 container.stop: # stop container container
 	$(TRACE)
-	$(MCONTAINER) stop -t 1 $(CONTAINER_CONTAINER) $(DEVNULL) || true
+	$(MCONTAINER) stop -t 1 $(CONTAINER_NAME) $(DEVNULL) || true
 
 container.rm: container.stop # remove container container
 	$(TRACE)
-	$(MCONTAINER) rm $(CONTAINER_CONTAINER) $(DEVNULL)
+	$(MCONTAINER) rm $(CONTAINER_NAME) $(DEVNULL)
 
 container.rmi: # remove container image
 	$(TRACE)
 	$(MCONTAINER) rmi $(CONTAINER_IMAGE)
+
+container.logs: # show container log
+	$(TRACE)
+	$(MCONTAINER) logs $(CONTAINER_NAME)
 
 container.shell: container.make.config container.start # start container shell as $(USER)
 	$(TRACE)
@@ -162,13 +165,13 @@ container.distclean: container.rmi
 
 container.help:
 	$(CONTAINER_IMAGE_ID)
-	$(CONTAINER_CONTAINER_ID)
-	$(CONTAINER_CONTAINER_RUNNING)
+	$(CONTAINER_NAME_ID)
+	$(CONTAINER_NAME_RUNNING)
 	$(call run-help, container.mk)
 	$(GREEN)
 	$(ECHO) "\n CONTAINER_DISTRO=$(CONTAINER_DISTRO):$(CONTAINER_DISTRO_VER)"
 	$(ECHO) " IMAGE=$(CONTAINER_IMAGE) id=$(container_image_id)"
-	$(ECHO) " CONTAINER=$(CONTAINER_CONTAINER) id=$(container_container_id) running=$(container_container_running)"
+	$(ECHO) " CONTAINER=$(CONTAINER_NAME) id=$(container_name_id) running=$(container_name_running)"
 	$(ECHO) " BUILDDIR=$(BUILDDIR)"
 	$(ECHO) " CONTAINERHOST=$(CONTAINERHOST)"
 	$(ECHO) " MACHINE=$(MACHINE)"
